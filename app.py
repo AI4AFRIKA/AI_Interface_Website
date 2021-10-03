@@ -1,35 +1,57 @@
 import requests
 import streamlit as st
 
-
-MODEL_ID = "AI4Afrika/bart-en-tw"
 API_TOKEN = st.secrets['API_TOKEN']
-API_URL = f'https://api-inference.huggingface.co/models/{MODEL_ID}'
-
 headers = {'Authorization': f'Bearer {API_TOKEN}'}
 
-st.title('Machine Translation for English and Twi')
-st.header('Made by AI4Afrika team')
+st.title('Interact with AI4Afrika NLP models')
 
-def query(payload):
-	response = requests.post(API_URL, headers=headers, json=payload)
-	return response.json()
+def query(payload, model_id):
+    API_URL = f'https://api-inference.huggingface.co/models/{model_id}'
+    response = requests.post(API_URL, headers=headers, json=payload)
+    return response.json()
 
-# {
-# "error":"Model AI4Afrika/bart-en-tw is currently loading"
-# "estimated_time":22.31916772
-# }
+task = st.sidebar.radio('Tasks', ['Machine translation', 'Health chatbot'])
+st.header(task)
 
-st.session_state['translation'] = ''
+if task == 'Machine translation':
+    st.session_state['translation'] = ''
 
-with st.form('Translate'):
-    payload = st.text_area('English text', 'Hello.')
-    translate = st.form_submit_button('Translate')
-    if translate:
-        data = query(payload)
-        # st.json(data)
-        if isinstance(data, list):
-            st.session_state['translation'] = data[0]['generated_text']
-        elif isinstance(data, dict):
-            st.info(f'{data["error"]}. Please wait about {int(data["estimated_time"])} seconds.')
-    st.text_area('Twi translation', st.session_state['translation'])
+    with st.form('Translate'):
+        payload = st.text_area('English text', 'Hello.')
+        translate = st.form_submit_button('Translate')
+        if translate:
+            data = query(payload, 'AI4Afrika/bart-en-tw')
+            # st.json(data)
+            if isinstance(data, list):
+                st.session_state['translation'] = data[0]['generated_text']
+            elif isinstance(data, dict):
+                st.info(f'{data["error"]}. Please wait about {int(data["estimated_time"])} seconds.')
+        st.text_area('Twi translation', st.session_state['translation'])
+elif task == 'Health chatbot':
+    l, r = st.columns([3, 2])
+    if 'history' not in st.session_state:
+        st.session_state['history'] = []
+    with r:
+        message = st.text_area('Type your message', 'What is the menstrual cycle?')
+        send = st.button('Send')
+        clear = st.button('Clear history')
+    if clear:
+        st.session_state['history'] = []
+    elif send:
+        st.session_state['history'].append(message)
+        # history = ' '.join(st.session_state['history'])
+        response = query(message, 'AI4Afrika/health-chatbot')
+        reply = None
+        if isinstance(response, list):
+            reply = response[0]['generated_text']
+        elif isinstance(response, dict):            
+            reply = f'{response["error"]}. Please wait about {int(response["estimated_time"])} seconds.'
+        st.session_state['history'].append(reply)
+    with l:
+        st.text('History')
+        for i, h in enumerate(st.session_state['history']):
+            if i % 2 == 0:
+                st.text(f'User: {h}')
+            else:
+                st.text(f'Chatbot: {h}')
