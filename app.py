@@ -40,18 +40,22 @@ elif task == 'Health chatbot':
         st.session_state['history'] = []
     elif send:
         st.session_state['history'].append(message)
-        # history = ' '.join(st.session_state['history'])
-        response = query(message, 'AI4Afrika/health-chatbot')
+        response = query({
+            'inputs': message,
+            'parameters': {
+                'max_length': 500
+            }
+        }, 'AI4Afrika/health-chatbot')
         reply = None
         if isinstance(response, list):
-            reply = response[0]['generated_text']
-        elif isinstance(response, dict):            
+            reply = response[0]['generated_text'][len(message) + 1:]
+        elif isinstance(response, dict):
             reply = f'{response["error"]}. Please wait about {int(response["estimated_time"])} seconds.'
         st.session_state['history'].append(reply)
     with l:
         st.text('History')
         for i, h in enumerate(st.session_state['history']):
             if i % 2 == 0:
-                st.text(f'User: {h}')
+                st.markdown(f'User:\n{h}')
             else:
-                st.text(f'Chatbot: {h}')
+                st.markdown(f'Chatbot:\n{h}')
