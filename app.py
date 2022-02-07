@@ -21,7 +21,12 @@ if task == 'Machine translation':
         payload = st.text_area('English text', 'Hello.')
         translate = st.form_submit_button('Translate')
         if translate:
-            data = query(payload, 'AI4Afrika/bart-en-tw')
+            data = query({
+                'inputs': payload,
+                'parameters': {
+                    'max_length': 1000,
+                }
+            }, 'AI4Afrika/bart-en-tw')
             # st.json(data)
             if isinstance(data, list):
                 st.session_state['translation'] = data[0]['generated_text']
@@ -43,7 +48,7 @@ elif task == 'Health chatbot':
         response = query({
             'inputs': message,
             'parameters': {
-                'max_length': 500
+                'max_length': 500,
             }
         }, 'AI4Afrika/health-chatbot')
         reply = None
