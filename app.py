@@ -2,9 +2,25 @@ import requests
 import streamlit as st
 
 API_TOKEN = st.secrets['API_TOKEN']
+G_TRANS_API_TOKEN = st.secrets['G_TRANS_API_TOKEN']
 headers = {'Authorization': f'Bearer {API_TOKEN}'}
 
 st.title('Interact with AI4Afrika NLP models')
+
+def detect_lang(message):
+    url = f'https://translation.googleapis.com/language/translate/v2/detect?key={G_TRANS_API_TOKEN}&q={message}'
+    response = requests.get(url)
+    return response.json()
+
+def translate_src_to_en(message, src_lang):
+    url = f'https://www.googleapis.com/language/translate/v2?key={G_TRANS_API_TOKEN}&source={src_lang}&target=en&q={message}'
+    response = requests.get(url)
+    return response.json()
+
+def translate_en_to_src(message, src_lang):
+    url = f'https://www.googleapis.com/language/translate/v2?key={G_TRANS_API_TOKEN}&source=en&target={src_lang}&q={message}'
+    response = requests.get(url)
+    return response.json()
 
 def query(payload, model_id):
     API_URL = f'https://api-inference.huggingface.co/models/{model_id}'
@@ -44,9 +60,15 @@ elif task == 'Health chatbot':
     if clear:
         st.session_state['history'] = []
     elif send:
+        response = detect_lang(message)
+        lang = response['data']['detections'][0][0]['language'][:2]
+        message_en = message
+        if lang != 'en':
+            response = translate_src_to_en(message, lang)
+            message_en = response['data']['translations'][0]['translatedText']
         st.session_state['history'].append(message)
         response = query({
-            'inputs': message,
+            'inputs': message_en,
             'parameters': {
                 'max_length': 500,
             }
@@ -54,6 +76,9 @@ elif task == 'Health chatbot':
         reply = None
         if isinstance(response, list):
             reply = response[0]['generated_text'][len(message) + 1:]
+            if lang != 'en':
+                response = translate_en_to_src(reply, lang)
+                reply = response['data']['translations'][0]['translatedText']
         elif isinstance(response, dict):
             reply = f'{response["error"]}. Please wait about {int(response["estimated_time"])} seconds.'
         st.session_state['history'].append(reply)
