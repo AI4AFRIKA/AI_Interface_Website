@@ -27,7 +27,10 @@ def query(payload, model_id):
     response = requests.post(API_URL, headers=headers, json=payload)
     return response.json()
 
-task = st.sidebar.radio('Tasks', ['Machine translation', 'Health chatbot'])
+task = st.sidebar.radio('Tasks', [
+    # 'Machine translation',
+    'Health chatbot'
+])
 st.header(task)
 
 if task == 'Machine translation':
